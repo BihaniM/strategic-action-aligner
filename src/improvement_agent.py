@@ -59,6 +59,7 @@ def suggest_improvements_for_pair(
                 {"role": "user", "content": json.dumps(prompt)},
             ],
         },
+        headers={"ngrok-skip-browser-warning": "true"},
         timeout=600,
     )
     response.raise_for_status()

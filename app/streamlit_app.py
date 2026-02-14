@@ -35,7 +35,11 @@ from src.ingestion_pipeline import embed_and_store_chunks
 
 def check_ollama_connectivity() -> None:
     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-    response = requests.get(f"{base_url}/api/tags", timeout=20)
+    response = requests.get(
+        f"{base_url}/api/tags",
+        headers={"ngrok-skip-browser-warning": "true"},
+        timeout=20,
+    )
     response.raise_for_status()
 
 

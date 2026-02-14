@@ -16,6 +16,7 @@ class EmbeddingEngine:
             response = requests.post(
                 f"{self.ollama_base_url}/api/embeddings",
                 json={"model": self.ollama_embedding_model, "prompt": text},
+                headers={"ngrok-skip-browser-warning": "true"},
                 timeout=600,
             )
             response.raise_for_status()

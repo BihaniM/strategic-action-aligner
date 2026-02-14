@@ -22,6 +22,7 @@ def _ollama_json(system_prompt: str, user_payload: dict[str, Any]) -> dict[str, 
                 {"role": "user", "content": json.dumps(user_payload)},
             ],
         },
+        headers={"ngrok-skip-browser-warning": "true"},
         timeout=600,
     )
     response.raise_for_status()
