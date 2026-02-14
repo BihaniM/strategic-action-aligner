@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import requests
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +31,12 @@ from src.agentic_reasoning import run_agentic_reasoning_layer
 from src.evaluation import evaluate_strategy_action_matching
 from src.improvement_agent import run_improvement_agent_loop
 from src.ingestion_pipeline import embed_and_store_chunks
+
+
+def check_ollama_connectivity() -> None:
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
+    response = requests.get(f"{base_url}/api/tags", timeout=20)
+    response.raise_for_status()
 
 
 st.set_page_config(page_title="Plan Alignment Analyzer", layout="wide")
@@ -125,6 +132,14 @@ run_clicked = st.button("Run Alignment Analysis", type="primary", use_container_
 if run_clicked:
     if strategic_file is None or action_file is None:
         st.error("Please upload both Strategic Plan and Action Plan CSV files.")
+        st.stop()
+
+    try:
+        check_ollama_connectivity()
+    except requests.exceptions.RequestException:
+        st.error(
+            "Cannot connect to Ollama from this app runtime. Configure Streamlit Cloud secret OLLAMA_BASE_URL with a reachable Ollama endpoint (not localhost)."
+        )
         st.stop()
 
     strategic_df = pd.read_csv(strategic_file)
