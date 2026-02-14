@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
+import requests
 import numpy as np
 import pandas as pd
-from openai import OpenAI
-from src.config import OPENAI_API_KEY, OPENAI_CHAT_MODEL
+from src.config import OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL
 from src.embedding_engine import EmbeddingEngine
 from src.vector_store import VectorStore
 
@@ -13,9 +13,6 @@ class AlignmentAnalyzer:
     def __init__(self) -> None:
         self.embedding_engine = EmbeddingEngine()
         self.vector_store = VectorStore()
-        if not OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY is not configured.")
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
 
     def index_strategic_goals(self, strategic_df: pd.DataFrame) -> None:
         ids = strategic_df["goal_id"].astype(str).tolist()
@@ -25,6 +22,7 @@ class AlignmentAnalyzer:
         self.vector_store.upsert(ids=ids, embeddings=embeddings, documents=texts, metadatas=metadatas)
 
     def _llm_assess_alignment(self, action_text: str, goal_text: str, similarity_score: float) -> tuple[str, str]:
+        # LLM response generation
         prompt = {
             "task": "Assess whether an action is aligned with a strategic goal.",
             "action_text": action_text,
@@ -33,21 +31,24 @@ class AlignmentAnalyzer:
             "output": {"label": "Aligned|Partially Aligned|Not Aligned", "rationale": "short explanation"},
         }
 
-        response = self.client.chat.completions.create(
-            model=OPENAI_CHAT_MODEL,
-            temperature=0,
-            messages=[
-                {"role": "system", "content": "You are an expert in strategic planning and evaluation."},
-                {"role": "user", "content": json.dumps(prompt)},
-            ],
+        response = requests.post(
+            f"{OLLAMA_BASE_URL}/api/chat",
+            json={
+                "model": OLLAMA_CHAT_MODEL,
+                "format": "json",
+                "stream": False,
+                "messages": [
+                    {"role": "system", "content": "You are an expert in strategic planning and evaluation."},
+                    {"role": "user", "content": json.dumps(prompt)},
+                ],
+            },
+            timeout=180,
         )
-
-        content = response.choices[0].message.content or ""
-        try:
-            parsed = json.loads(content)
-            return parsed.get("label", "Partially Aligned"), parsed.get("rationale", "No rationale provided.")
-        except Exception:
-            return "Partially Aligned", content[:300] if content else "No rationale provided."
+        response.raise_for_status()
+        data = response.json()
+        content = data["message"]["content"]
+        parsed = json.loads(content)
+        return parsed.get("label", "Partially Aligned"), parsed.get("rationale", "No rationale provided.")
 
     def analyze(self, action_df: pd.DataFrame, top_k: int = 1) -> pd.DataFrame:
         action_ids = action_df["action_id"].astype(str).tolist()

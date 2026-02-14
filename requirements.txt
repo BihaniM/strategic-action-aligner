@@ -1,11 +1,8 @@
 streamlit
-openai
-langchain
 chromadb
 pandas
 numpy
 scikit-learn
 matplotlib
-sentence-transformers
 python-dotenv
 requests

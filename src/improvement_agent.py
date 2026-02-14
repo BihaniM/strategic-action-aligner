@@ -1,23 +1,15 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import requests
-from openai import OpenAI
 from sklearn.metrics.pairwise import cosine_similarity
 
-from src.config import (
-    LLM_PROVIDER,
-    OLLAMA_BASE_URL,
-    OLLAMA_CHAT_MODEL,
-    OPENAI_API_KEY,
-    OPENAI_CHAT_MODEL,
-)
+from src.config import OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL
 from src.embedding_engine import EmbeddingEngine
 
 
@@ -35,31 +27,8 @@ def suggest_improvements_for_pair(
     strategy_text: str,
     matched_actions_text: str,
     similarity_score: float,
-    client: OpenAI | None = None,
 ) -> dict[str, Any]:
-    llm_provider = os.getenv("LLM_PROVIDER", LLM_PROVIDER).strip().lower()
-    ollama_base_url = os.getenv("OLLAMA_BASE_URL", OLLAMA_BASE_URL).rstrip("/")
-    ollama_chat_model = os.getenv("OLLAMA_CHAT_MODEL", OLLAMA_CHAT_MODEL)
-
-    fallback = {
-        "missing_actions": [
-            f"Add a targeted initiative directly mapped to strategy: {strategy_text[:120]}",
-            "Define an owner and execution milestones for each action item.",
-        ],
-        "improved_kpis": [
-            "Add baseline, target, and reporting frequency for each KPI.",
-            "Track outcome KPI and leading KPI for each strategic objective.",
-        ],
-        "timeline_or_scope_changes": [
-            "Break delivery into 30-60-90 day milestones with measurable outputs.",
-            "Narrow scope to highest-impact actions first, then expand by phase.",
-        ],
-        "revised_action_plan_summary": (
-            "Refocus actions to explicitly map to the strategy, add measurable KPIs, and stage execution over phased milestones."
-        ),
-        "generation_mode": "fallback",
-    }
-
+    # LLM response generation
     prompt = {
         "task": "Improve action plan alignment with strategic objective.",
         "strategy": strategy_text,
@@ -79,57 +48,24 @@ def suggest_improvements_for_pair(
         },
     }
 
-    if llm_provider == "ollama":
-        try:
-            response = requests.post(
-                f"{ollama_base_url}/api/chat",
-                json={
-                    "model": ollama_chat_model,
-                    "format": "json",
-                    "stream": False,
-                    "messages": [
-                        {"role": "system", "content": "You are a strategic planning expert."},
-                        {"role": "user", "content": json.dumps(prompt)},
-                    ],
-                },
-                timeout=180,
-            )
-            response.raise_for_status()
-            data = response.json()
-            content = data.get("message", {}).get("content", "{}")
-            parsed = json.loads(content)
-            parsed["generation_mode"] = "ollama"
-        except Exception:
-            parsed = fallback
-
-        parsed.setdefault("missing_actions", [])
-        parsed.setdefault("improved_kpis", [])
-        parsed.setdefault("timeline_or_scope_changes", [])
-        parsed.setdefault("revised_action_plan_summary", "")
-        return parsed
-
-    if not OPENAI_API_KEY:
-        return fallback
-
-    llm_client = client or OpenAI(api_key=OPENAI_API_KEY)
-
-    try:
-        response = llm_client.chat.completions.create(
-            model=OPENAI_CHAT_MODEL,
-            temperature=0.2,
-            response_format={"type": "json_object"},
-            messages=[
+    response = requests.post(
+        f"{OLLAMA_BASE_URL}/api/chat",
+        json={
+            "model": OLLAMA_CHAT_MODEL,
+            "format": "json",
+            "stream": False,
+            "messages": [
                 {"role": "system", "content": "You are a strategic planning expert."},
                 {"role": "user", "content": json.dumps(prompt)},
             ],
-        )
-
-        content = response.choices[0].message.content or "{}"
-        parsed = json.loads(content)
-        parsed["generation_mode"] = "llm"
-    except Exception:
-        parsed = fallback
-
+        },
+        timeout=600,
+    )
+    response.raise_for_status()
+    data = response.json()
+    content = data["message"]["content"]
+    parsed = json.loads(content)
+    parsed["generation_mode"] = "ollama"
     parsed.setdefault("missing_actions", [])
     parsed.setdefault("improved_kpis", [])
     parsed.setdefault("timeline_or_scope_changes", [])
@@ -145,7 +81,8 @@ def _suggestion_text_for_embedding(suggestions: dict[str, Any]) -> str:
     summary = suggestions.get("revised_action_plan_summary", "")
     if summary:
         pieces.append(summary)
-    return "\n".join(str(part) for part in pieces if str(part).strip())
+    text = "\n".join(str(part) for part in pieces if str(part).strip())
+    return text
 
 
 def run_improvement_agent_loop(
@@ -154,6 +91,7 @@ def run_improvement_agent_loop(
     max_iterations: int = 3,
     embedder: EmbeddingEngine | None = None,
 ) -> tuple[pd.DataFrame, list[dict[str, Any]]]:
+    # Improvement loop
     if low_alignment_df.empty:
         return low_alignment_df.copy(), []
 
@@ -177,6 +115,8 @@ def run_improvement_agent_loop(
 
             strategy_embedding = np.array(engine.embed_texts([str(row["strategy"])]), dtype=float)
             suggestion_text = _suggestion_text_for_embedding(suggestions)
+            if suggestion_text == "":
+                suggestion_text = str(row["matched_actions"])
             suggestion_embedding = np.array(engine.embed_texts([suggestion_text]), dtype=float)
             improved_score = float(cosine_similarity(strategy_embedding, suggestion_embedding)[0][0])
 

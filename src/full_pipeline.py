@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 
 import pandas as pd
@@ -26,15 +25,8 @@ def run_full_pipeline(
     top_k: int,
     max_iterations: int,
     persist_chroma: bool,
-    embedding_provider_override: str | None = None,
-    llm_provider_override: str | None = None,
     ground_truth_csv: str | None = None,
 ) -> dict:
-    if embedding_provider_override:
-        os.environ["EMBEDDING_PROVIDER"] = embedding_provider_override
-    if llm_provider_override:
-        os.environ["LLM_PROVIDER"] = llm_provider_override
-
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -99,18 +91,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--max-iterations", type=int, default=3)
     parser.add_argument("--no-chroma", action="store_true", help="Skip writing chunks to ChromaDB")
-    parser.add_argument(
-        "--embedding-provider",
-        choices=["openai", "sentence-transformers", "ollama"],
-        default=None,
-        help="Override embedding provider for this run.",
-    )
-    parser.add_argument(
-        "--llm-provider",
-        choices=["openai", "ollama"],
-        default=None,
-        help="Override LLM provider for suggestion generation.",
-    )
     parser.add_argument("--ground-truth-csv", default=None)
     return parser.parse_args()
 
@@ -125,8 +105,6 @@ def main() -> None:
         top_k=args.top_k,
         max_iterations=args.max_iterations,
         persist_chroma=not args.no_chroma,
-        embedding_provider_override=args.embedding_provider,
-        llm_provider_override=args.llm_provider,
         ground_truth_csv=args.ground_truth_csv,
     )
     print(json.dumps(summary, indent=2))
