@@ -33,28 +33,96 @@ from src.ingestion_pipeline import embed_and_store_chunks
 
 
 st.set_page_config(page_title="Plan Alignment Analyzer", layout="wide")
-st.title("Strategic vs Action Plan Alignment Analyzer")
-st.caption("Upload strategy and action plans, compute alignment, and generate AI improvement suggestions.")
-
-strategic_file = st.file_uploader("Upload Strategic Plan CSV", type=["csv"], key="strategic_csv")
-action_file = st.file_uploader("Upload Action Plan CSV", type=["csv"], key="action_csv")
-ground_truth_file = st.file_uploader(
-    "Optional: Upload Ground Truth CSV (strategy_chunk_id, action_chunk_id)",
-    type=["csv"],
-    key="ground_truth_csv",
+st.markdown(
+    """
+    <style>
+    .hero {
+        padding: 1rem 1.2rem;
+        border-radius: 14px;
+        background: linear-gradient(120deg, #12355b, #1f6aa5);
+        color: #ffffff;
+        margin-bottom: 1rem;
+    }
+    .hero h1 {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+    .hero p {
+        margin: 0.35rem 0 0 0;
+        opacity: 0.95;
+        font-size: 0.95rem;
+    }
+    .section-title {
+        font-weight: 650;
+        color: #143d66;
+        margin-top: 0.5rem;
+        margin-bottom: 0.2rem;
+    }
+    .card {
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        border: 1px solid #e6ecf2;
+        background: #f8fbff;
+    }
+    .card h4 {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #3f5f7c;
+        font-weight: 600;
+    }
+    .card p {
+        margin: 0.35rem 0 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #0c2d4d;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-top_k = st.slider("Top matching actions per strategy", min_value=1, max_value=10, value=3, step=1)
-low_alignment_threshold = st.slider(
-    "Low-alignment threshold",
-    min_value=0.0,
-    max_value=1.0,
-    value=0.6,
-    step=0.01,
+st.markdown(
+    """
+    <div class="hero">
+      <h1>Strategic vs Action Plan Alignment Analyzer</h1>
+      <p>Upload plans, score alignment, detect low-alignment gaps, and generate AI recommendations.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
-persist_to_chroma = st.checkbox("Store uploaded chunks in ChromaDB", value=True)
 
-if st.button("Run Alignment Analysis"):
+with st.container(border=True):
+    st.markdown('<div class="section-title">Input Files</div>', unsafe_allow_html=True)
+    upload_col_1, upload_col_2, upload_col_3 = st.columns([1, 1, 1])
+    with upload_col_1:
+        strategic_file = st.file_uploader("Upload Strategic Plan CSV", type=["csv"], key="strategic_csv")
+    with upload_col_2:
+        action_file = st.file_uploader("Upload Action Plan CSV", type=["csv"], key="action_csv")
+    with upload_col_3:
+        ground_truth_file = st.file_uploader(
+            "Optional Ground Truth CSV", type=["csv"], key="ground_truth_csv"
+        )
+
+with st.container(border=True):
+    st.markdown('<div class="section-title">Analysis Controls</div>', unsafe_allow_html=True)
+    cfg_col_1, cfg_col_2, cfg_col_3 = st.columns([1, 1, 1])
+    with cfg_col_1:
+        top_k = st.slider("Top matching actions", min_value=1, max_value=10, value=3, step=1)
+    with cfg_col_2:
+        low_alignment_threshold = st.slider(
+            "Low-alignment threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.6,
+            step=0.01,
+        )
+    with cfg_col_3:
+        persist_to_chroma = st.checkbox("Store chunks in ChromaDB", value=True)
+
+run_clicked = st.button("Run Alignment Analysis", type="primary", use_container_width=True)
+
+if run_clicked:
     if strategic_file is None or action_file is None:
         st.error("Please upload both Strategic Plan and Action Plan CSV files.")
         st.stop()
@@ -71,23 +139,53 @@ if st.button("Run Alignment Analysis"):
         stored_count = embed_and_store_chunks(artifacts.chunks_df)
         st.info(f"Stored {stored_count} chunks in ChromaDB.")
 
-    st.subheader("Overall Alignment Score")
-    st.metric("Alignment", f"{overall_alignment_score:.2f}%")
+    score_col, strat_col, low_col = st.columns(3)
+    with score_col:
+        st.markdown(
+            f"""
+            <div class="card">
+              <h4>Overall Alignment</h4>
+              <p>{overall_alignment_score:.2f}%</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with strat_col:
+        st.markdown(
+            f"""
+            <div class="card">
+              <h4>Strategies Scored</h4>
+              <p>{len(strategy_alignment_df)}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with low_col:
+        st.markdown(
+            f"""
+            <div class="card">
+              <h4>Low-Alignment Items</h4>
+              <p>{len(low_alignment_df)}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    st.subheader("Strategy-wise Alignment Table")
-    st.dataframe(
-        strategy_alignment_df[["strategy", "matched_actions", "similarity_score", "section_name"]],
-        use_container_width=True,
-    )
+    with st.container(border=True):
+        st.markdown('<div class="section-title">Strategy-wise Alignment</div>', unsafe_allow_html=True)
+        st.dataframe(
+            strategy_alignment_df[["strategy", "matched_actions", "similarity_score", "section_name"]],
+            use_container_width=True,
+        )
 
-    st.download_button(
-        label="Download strategy alignment table",
-        data=strategy_alignment_df.to_csv(index=False).encode("utf-8"),
-        file_name="strategy_alignment_table.csv",
-        mime="text/csv",
-    )
+        st.download_button(
+            label="Download strategy alignment table",
+            data=strategy_alignment_df.to_csv(index=False).encode("utf-8"),
+            file_name="strategy_alignment_table.csv",
+            mime="text/csv",
+        )
 
-    st.subheader("Low-alignment Warnings")
+    st.markdown('<div class="section-title">Low-alignment Warnings</div>', unsafe_allow_html=True)
     if low_alignment_df.empty:
         st.success("No low-alignment strategies found at the selected threshold.")
         improved_df = low_alignment_df
@@ -106,7 +204,7 @@ if st.button("Run Alignment Analysis"):
             max_iterations=3,
         )
 
-        st.subheader("AI-generated Improvement Suggestions")
+        st.markdown('<div class="section-title">AI-generated Improvement Suggestions</div>', unsafe_allow_html=True)
         if suggestion_history:
             suggestion_rows = []
             for item in suggestion_history:
@@ -130,7 +228,7 @@ if st.button("Run Alignment Analysis"):
                 mime="application/json",
             )
 
-        st.subheader("Post-improvement Low-alignment Table")
+        st.markdown('<div class="section-title">Post-improvement Low-alignment Table</div>', unsafe_allow_html=True)
         st.dataframe(
             improved_df[["strategy", "matched_actions", "similarity_score", "section_name"]],
             use_container_width=True,
@@ -140,7 +238,7 @@ if st.button("Run Alignment Analysis"):
             low_alignment_df=improved_df,
         )
 
-        st.subheader("Agentic AI Reasoning Recommendations")
+        st.markdown('<div class="section-title">Agentic AI Reasoning Recommendations</div>', unsafe_allow_html=True)
         st.dataframe(agentic_df, use_container_width=True)
         st.download_button(
             label="Download agentic recommendations",
