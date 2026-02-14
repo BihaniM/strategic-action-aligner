@@ -12,6 +12,7 @@ from src.alignment_engine import (
     calculate_overall_alignment_percentage,
     get_low_alignment_pairs,
 )
+from src.agentic_reasoning import run_agentic_reasoning_layer
 from src.evaluation import evaluate_strategy_action_matching
 from src.improvement_agent import run_improvement_agent_loop
 from src.ingestion_pipeline import embed_and_store_chunks
@@ -48,21 +49,31 @@ def run_full_pipeline(
         similarity_threshold=low_alignment_threshold,
         max_iterations=max_iterations,
     )
+    agentic_recommendations_df, agentic_reasoning_log = run_agentic_reasoning_layer(
+        low_alignment_df=improved_low_alignment,
+    )
 
     chunks_path = out_dir / "chunk_dataframe.csv"
     strategy_path = out_dir / "strategy_alignment_table.csv"
     low_path = out_dir / "low_alignment_pairs.csv"
     improved_low_path = out_dir / "improved_low_alignment_pairs.csv"
     suggestions_path = out_dir / "improvement_suggestions.jsonl"
+    agentic_recommendations_path = out_dir / "agentic_recommendations.csv"
+    agentic_reasoning_path = out_dir / "agentic_reasoning.jsonl"
     summary_path = out_dir / "pipeline_summary.json"
 
     artifacts.chunks_df.to_csv(chunks_path, index=False)
     strategy_table.to_csv(strategy_path, index=False)
     low_alignment.to_csv(low_path, index=False)
     improved_low_alignment.to_csv(improved_low_path, index=False)
+    agentic_recommendations_df.to_csv(agentic_recommendations_path, index=False)
 
     with suggestions_path.open("w", encoding="utf-8") as f:
         for item in improvement_history:
+            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+    with agentic_reasoning_path.open("w", encoding="utf-8") as f:
+        for item in agentic_reasoning_log:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
     summary: dict = {
@@ -71,6 +82,7 @@ def run_full_pipeline(
         "strategy_rows": int(len(strategy_table)),
         "low_alignment_rows": int(len(low_alignment)),
         "improvement_records": int(len(improvement_history)),
+        "agentic_recommendation_rows": int(len(agentic_recommendations_df)),
     }
 
     if ground_truth_csv:

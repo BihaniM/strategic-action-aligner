@@ -1,0 +1,16 @@
+strategy_chunk_id,action_chunk_id
+strategic::G1::0,action::A1::0
+strategic::G1::0,action::A7::0
+strategic::G1::0,action::A8::0
+strategic::G2::0,action::A4::0
+strategic::G2::0,action::A5::0
+strategic::G2::0,action::A11::0
+strategic::G3::0,action::A2::0
+strategic::G3::0,action::A3::0
+strategic::G4::0,action::A11::0
+strategic::G4::0,action::A12::0
+strategic::G5::0,action::A9::0
+strategic::G6::0,action::A6::0
+strategic::G7::0,action::A10::0
+strategic::G8::0,action::A7::0
+strategic::G8::0,action::A8::0

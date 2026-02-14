@@ -20,6 +20,7 @@ from src.alignment_engine import (
     calculate_overall_alignment_percentage,
     get_low_alignment_pairs,
 )
+from src.agentic_reasoning import run_agentic_reasoning_layer
 from src.evaluation import evaluate_strategy_action_matching
 from src.improvement_agent import run_improvement_agent_loop
 from src.ingestion_pipeline import embed_and_store_chunks
@@ -85,6 +86,7 @@ if st.button("Run Alignment Analysis"):
         st.success("No low-alignment strategies found at the selected threshold.")
         improved_df = low_alignment_df
         suggestion_history = []
+        agentic_df = low_alignment_df
     else:
         st.warning(f"Found {len(low_alignment_df)} low-alignment strategies.")
         st.dataframe(
@@ -126,6 +128,19 @@ if st.button("Run Alignment Analysis"):
         st.dataframe(
             improved_df[["strategy", "matched_actions", "similarity_score", "section_name"]],
             use_container_width=True,
+        )
+
+        agentic_df, _ = run_agentic_reasoning_layer(
+            low_alignment_df=improved_df,
+        )
+
+        st.subheader("Agentic AI Reasoning Recommendations")
+        st.dataframe(agentic_df, use_container_width=True)
+        st.download_button(
+            label="Download agentic recommendations",
+            data=agentic_df.to_csv(index=False).encode("utf-8"),
+            file_name="agentic_recommendations.csv",
+            mime="text/csv",
         )
 
     if ground_truth_file is not None:
