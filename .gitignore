@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+chroma_db/
+*.sqlite3
+
+# Output artifacts
+/data/output/*.csv
+/data/output/*.json
+/data/output/*.jsonl
+!/data/output/.gitkeep
