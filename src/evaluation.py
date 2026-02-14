@@ -39,7 +39,18 @@ def evaluate_strategy_action_matching(
         y_pred.append(pred_first)
 
     if not y_true:
-        raise ValueError("No overlapping strategy_chunk_id found between predictions and ground truth.")
+        predicted_ids = set(predicted_df["strategy_chunk_id"].astype(str).tolist())
+        ground_truth_ids = set(ground_truth_df["strategy_chunk_id"].astype(str).tolist())
+        overlap_count = len(predicted_ids.intersection(ground_truth_ids))
+        predicted_example = next(iter(predicted_ids), "N/A")
+        ground_truth_example = next(iter(ground_truth_ids), "N/A")
+        raise ValueError(
+            "No overlapping strategy_chunk_id found between predictions and ground truth. "
+            f"overlap_count={overlap_count}, "
+            f"predicted_rows={len(predicted_ids)}, ground_truth_rows={len(ground_truth_ids)}, "
+            f"predicted_example={predicted_example}, ground_truth_example={ground_truth_example}. "
+            "Use a ground truth file generated for the same chunking run."
+        )
 
     precision, recall, f1, _ = precision_recall_fscore_support(
         y_true,

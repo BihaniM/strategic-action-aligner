@@ -269,14 +269,16 @@ if run_clicked:
     if ground_truth_file is not None:
         st.subheader("Alignment Evaluation (Ground Truth)")
         ground_truth_df = pd.read_csv(ground_truth_file)
-        metrics = evaluate_strategy_action_matching(
-            predicted_df=strategy_alignment_df,
-            ground_truth_source=ground_truth_df,
-        )
-        st.dataframe(pd.DataFrame([metrics]), use_container_width=True)
-
-        st.caption(
-            f"Evaluated on {int(metrics['sample_size'])} labeled strategy-action pairs."
-        )
+        try:
+            metrics = evaluate_strategy_action_matching(
+                predicted_df=strategy_alignment_df,
+                ground_truth_source=ground_truth_df,
+            )
+            st.dataframe(pd.DataFrame([metrics]), use_container_width=True)
+            st.caption(
+                f"Evaluated on {int(metrics['sample_size'])} labeled strategy-action pairs."
+            )
+        except ValueError as exc:
+            st.warning(str(exc))
 
     st.success("Alignment analysis completed successfully.")
