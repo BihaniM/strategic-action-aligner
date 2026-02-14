@@ -1,0 +1,13 @@
+action_id,action_text,owner,start_date,end_date,status
+A1,Launch Malaysia e-commerce website with localized payment and logistics integration,Head of Business Development,2026-01-01,2026-12-31,Planned
+A2,Develop and launch native iOS and Android mobile applications,CTO,2025-07-01,2026-03-31,In Progress
+A3,Implement AI-powered product recommendation engine across homepage and product pages,CTO,2025-04-01,2026-01-31,In Progress
+A4,Deploy AI chatbot and live chat support to reduce response time to under 30 minutes,Head of Customer Service,2026-04-01,2026-09-30,Planned
+A5,Optimize website checkout flow from five steps to three steps to improve conversion rate,Head of Engineering,2025-03-01,2025-09-30,In Progress
+A6,Implement advanced analytics platform with real-time executive dashboards,Head of Data,2025-01-01,2025-09-30,Completed
+A7,Launch Home and Living product category with at least 300 SKUs,Head of Merchandising,2026-01-01,2026-06-30,Planned
+A8,Launch Beauty and Personal Care category with curated brand partnerships,Head of Merchandising,2026-09-01,2026-12-31,Planned
+A9,Implement predictive demand forecasting and automated inventory reordering,Head of Operations,2027-01-01,2027-09-30,Planned
+A10,Transition to 100 percent recyclable packaging and offset delivery carbon emissions,Sustainability Manager,2026-01-01,2026-09-30,Planned
+A11,Launch loyalty and referral program to increase repeat purchase rate to 45 percent,Head of Customer Experience,2025-08-01,2026-03-31,In Progress
+A12,Execute SEO and content marketing strategy to increase organic traffic by 65 percent,Content Marketing Manager,2027-04-01,2027-12-31,Planned

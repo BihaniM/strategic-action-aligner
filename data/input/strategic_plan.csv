@@ -1,0 +1,9 @@
+goal_id,goal_text,pillar,owner,time_horizon,priority
+G1,Achieve 30 million dollars in annual revenue by expanding existing markets and entering Malaysia and Thailand,Growth,CEO,2027,High
+G2,Improve customer experience by reducing cart abandonment to 45 percent and increasing satisfaction score to 9 out of 10,Customer Experience,Chief Customer Officer,2027,High
+G3,Increase mobile conversion rate from 1.8 percent to 3.5 percent through mobile app launch and UX optimization,Customer Experience,CTO,2027,High
+G4,Reduce customer acquisition cost by 30 percent while maintaining a minimum 15 percent EBITDA margin,Operational Excellence,CFO,2027,High
+G5,Implement predictive inventory and supply chain optimization to reduce stockouts by 60 percent,Operations,Head of Operations,2027,Medium
+G6,Establish a data-driven culture where 90 percent of strategic decisions are backed by analytics insights,Data,Head of Data,2026,High
+G7,Achieve carbon-neutral delivery and 80 percent sustainable product sourcing,Sustainability,Sustainability Manager,2027,Medium
+G8,Expand product portfolio by launching Home and Beauty categories contributing 3 million dollars in revenue,Growth,Head of Merchandising,2027,Medium
