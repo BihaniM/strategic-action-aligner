@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-import requests
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -13,9 +12,10 @@ if str(PROJECT_ROOT) not in sys.path:
 
 _env_keys = [
     "CHROMA_COLLECTION",
-    "OLLAMA_BASE_URL",
-    "OLLAMA_EMBEDDING_MODEL",
-    "OLLAMA_CHAT_MODEL",
+    "HF_API_BASE",
+    "HF_TOKEN",
+    "HF_EMBEDDING_MODEL",
+    "HF_CHAT_MODEL",
 ]
 for key in _env_keys:
     if key in st.secrets and not os.getenv(key):
@@ -31,16 +31,14 @@ from src.agentic_reasoning import run_agentic_reasoning_layer
 from src.evaluation import evaluate_strategy_action_matching
 from src.improvement_agent import run_improvement_agent_loop
 from src.ingestion_pipeline import embed_and_store_chunks
+from src.hf_client import HFClient, HFClientError
 
 
-def check_ollama_connectivity() -> None:
-    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-    response = requests.get(
-        f"{base_url}/api/tags",
-        headers={"ngrok-skip-browser-warning": "true"},
-        timeout=20,
-    )
-    response.raise_for_status()
+def check_huggingface_connectivity() -> None:
+    if not os.getenv("HF_TOKEN"):
+        raise ValueError("Missing HF_TOKEN secret or environment variable.")
+    client = HFClient()
+    client.embed_texts(["health check"])
 
 
 st.set_page_config(page_title="Plan Alignment Analyzer", layout="wide")
@@ -139,10 +137,17 @@ if run_clicked:
         st.stop()
 
     try:
-        check_ollama_connectivity()
-    except requests.exceptions.RequestException:
+        check_huggingface_connectivity()
+    except (HFClientError, ValueError) as exc:
         st.error(
-            "Cannot connect to Ollama from this app runtime. Configure Streamlit Cloud secret OLLAMA_BASE_URL with a reachable Ollama endpoint (not localhost)."
+            "Cannot connect to Hugging Face Inference API. Check secrets and model access."
+        )
+        st.caption(str(exc))
+        st.caption(
+            "Required secrets: HF_API_BASE, HF_TOKEN, HF_EMBEDDING_MODEL, HF_CHAT_MODEL, CHROMA_COLLECTION"
+        )
+        st.caption(
+            "Tip: if error is 401/403, token permission is the issue; 404 means wrong model id or endpoint; 429 means quota/rate limit."
         )
         st.stop()
 

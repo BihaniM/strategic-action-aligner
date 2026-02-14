@@ -1,26 +1,25 @@
 from __future__ import annotations
 
-import requests
-from src.config import OLLAMA_BASE_URL, OLLAMA_EMBEDDING_MODEL
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+from src.hf_client import HFClient
 
 
 class EmbeddingEngine:
     def __init__(self) -> None:
-        self.ollama_base_url = OLLAMA_BASE_URL
-        self.ollama_embedding_model = OLLAMA_EMBEDDING_MODEL
+        self.client = HFClient()
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         cleaned_texts = [text if isinstance(text, str) else str(text) for text in texts]
-        embeddings: list[list[float]] = []
-        for text in cleaned_texts:
-            response = requests.post(
-                f"{self.ollama_base_url}/api/embeddings",
-                json={"model": self.ollama_embedding_model, "prompt": text},
-                headers={"ngrok-skip-browser-warning": "true"},
-                timeout=600,
-            )
-            response.raise_for_status()
-            data = response.json()
-            embedding = data["embedding"]
-            embeddings.append(embedding)
-        return embeddings
+        return self.client.embed_texts(cleaned_texts)
+
+
+def generate_embeddings(texts: list[str]) -> list[list[float]]:
+    return EmbeddingEngine().embed_texts(texts)
+
+
+def cosine_similarity_matrix(a_embeddings: list[list[float]], b_embeddings: list[list[float]]) -> np.ndarray:
+    a = np.array(a_embeddings, dtype=float)
+    b = np.array(b_embeddings, dtype=float)
+    return cosine_similarity(a, b)

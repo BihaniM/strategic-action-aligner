@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import pandas as pd
-import requests
 from sklearn.metrics.pairwise import cosine_similarity
 
-from src.config import OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL
 from src.embedding_engine import EmbeddingEngine
+from src.hf_client import HFClient
 
 
 @dataclass
@@ -28,49 +26,25 @@ def suggest_improvements_for_pair(
     matched_actions_text: str,
     similarity_score: float,
 ) -> dict[str, Any]:
-    # LLM response generation
-    prompt = {
-        "task": "Improve action plan alignment with strategic objective.",
+    prompt = (
+        "You are a strategic planning expert. Suggest improvements that align actions to strategy. "
+        "Output strict JSON using keys: missing_actions (array), improved_kpis (array), "
+        "timeline_or_scope_changes (array), revised_action_plan_summary (string)."
+    )
+
+    payload = {
         "strategy": strategy_text,
         "matched_actions": matched_actions_text,
         "similarity_score": similarity_score,
-        "instructions": [
-            "Suggest missing actions",
-            "Suggest improved KPIs",
-            "Suggest timeline or scope changes",
-            "Return valid JSON only",
-        ],
-        "required_output_schema": {
-            "missing_actions": ["string"],
-            "improved_kpis": ["string"],
-            "timeline_or_scope_changes": ["string"],
-            "revised_action_plan_summary": "string",
-        },
     }
 
-    response = requests.post(
-        f"{OLLAMA_BASE_URL}/api/chat",
-        json={
-            "model": OLLAMA_CHAT_MODEL,
-            "format": "json",
-            "stream": False,
-            "messages": [
-                {"role": "system", "content": "You are a strategic planning expert."},
-                {"role": "user", "content": json.dumps(prompt)},
-            ],
-        },
-        headers={"ngrok-skip-browser-warning": "true"},
-        timeout=600,
-    )
-    response.raise_for_status()
-    data = response.json()
-    content = data["message"]["content"]
-    parsed = json.loads(content)
-    parsed["generation_mode"] = "ollama"
+    client = HFClient()
+    parsed = client.generate_json(system_prompt=prompt, user_payload=payload)
     parsed.setdefault("missing_actions", [])
     parsed.setdefault("improved_kpis", [])
     parsed.setdefault("timeline_or_scope_changes", [])
     parsed.setdefault("revised_action_plan_summary", "")
+    parsed["generation_mode"] = "huggingface"
     return parsed
 
 
@@ -92,7 +66,6 @@ def run_improvement_agent_loop(
     max_iterations: int = 3,
     embedder: EmbeddingEngine | None = None,
 ) -> tuple[pd.DataFrame, list[dict[str, Any]]]:
-    # Improvement loop
     if low_alignment_df.empty:
         return low_alignment_df.copy(), []
 
