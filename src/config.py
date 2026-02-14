@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "plan_alignment_ollama")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
-OLLAMA_CHAT_MODEL = os.getenv("OLLAMA_CHAT_MODEL", "llama3.2:1b")
+CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "plan_alignment_hf")
+HF_API_BASE = os.getenv("HF_API_BASE", "https://api-inference.huggingface.co/models").rstrip("/")
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+HF_EMBEDDING_MODEL = os.getenv("HF_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+HF_CHAT_MODEL = os.getenv("HF_CHAT_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")

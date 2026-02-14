@@ -1,38 +1,22 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pandas as pd
-import requests
 
-from src.config import OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL
+from src.hf_client import HFClient
 
 
-def _ollama_json(system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]:
-    response = requests.post(
-        f"{OLLAMA_BASE_URL}/api/chat",
-        json={
-            "model": OLLAMA_CHAT_MODEL,
-            "format": "json",
-            "stream": False,
-            "options": {"temperature": 0},
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": json.dumps(user_payload)},
-            ],
-        },
-        headers={"ngrok-skip-browser-warning": "true"},
-        timeout=600,
-    )
-    response.raise_for_status()
-    data = response.json()
-    content = data["message"]["content"]
-    return json.loads(content)
+def _hf_json(system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]:
+    client = HFClient()
+    return client.generate_json(system_prompt=system_prompt, user_payload=user_payload)
 
 
 def _agentic_reasoning(strategy: str, matched_actions: str, similarity_score: float) -> dict[str, Any]:
-    system_prompt = "You are an agentic strategic planner with diagnose-propose-critique reasoning. Return strict JSON."
+    system_prompt = (
+        "You are an agentic strategic planner using diagnose-propose-critique reasoning. "
+        "Return strict JSON with keys diagnosis, proposal, critique."
+    )
     payload = {
         "task": "Perform diagnose-propose-critique reasoning for strategic alignment.",
         "strategy": strategy,
@@ -59,7 +43,7 @@ def _agentic_reasoning(strategy: str, matched_actions: str, similarity_score: fl
             },
         },
     }
-    return _ollama_json(system_prompt, payload)
+    return _hf_json(system_prompt, payload)
 
 
 def run_agentic_reasoning_layer(

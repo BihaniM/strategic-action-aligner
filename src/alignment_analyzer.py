@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
-import requests
 import numpy as np
 import pandas as pd
-from src.config import OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL
+
 from src.embedding_engine import EmbeddingEngine
+from src.hf_client import HFClient
 from src.vector_store import VectorStore
 
 
@@ -13,6 +12,7 @@ class AlignmentAnalyzer:
     def __init__(self) -> None:
         self.embedding_engine = EmbeddingEngine()
         self.vector_store = VectorStore()
+        self.hf_client = HFClient()
 
     def index_strategic_goals(self, strategic_df: pd.DataFrame) -> None:
         ids = strategic_df["goal_id"].astype(str).tolist()
@@ -22,34 +22,20 @@ class AlignmentAnalyzer:
         self.vector_store.upsert(ids=ids, embeddings=embeddings, documents=texts, metadatas=metadatas)
 
     def _llm_assess_alignment(self, action_text: str, goal_text: str, similarity_score: float) -> tuple[str, str]:
-        # LLM response generation
-        prompt = {
-            "task": "Assess whether an action is aligned with a strategic goal.",
+        system_prompt = (
+            "Assess whether an action is aligned with a strategic goal. "
+            "Return strict JSON with keys label and rationale. "
+            "Label must be one of Aligned, Partially Aligned, Not Aligned."
+        )
+        payload = {
             "action_text": action_text,
             "goal_text": goal_text,
             "similarity_score": similarity_score,
-            "output": {"label": "Aligned|Partially Aligned|Not Aligned", "rationale": "short explanation"},
         }
-
-        response = requests.post(
-            f"{OLLAMA_BASE_URL}/api/chat",
-            json={
-                "model": OLLAMA_CHAT_MODEL,
-                "format": "json",
-                "stream": False,
-                "messages": [
-                    {"role": "system", "content": "You are an expert in strategic planning and evaluation."},
-                    {"role": "user", "content": json.dumps(prompt)},
-                ],
-            },
-            headers={"ngrok-skip-browser-warning": "true"},
-            timeout=180,
+        parsed = self.hf_client.generate_json(system_prompt=system_prompt, user_payload=payload)
+        return parsed.get("label", "Partially Aligned"), parsed.get(
+            "rationale", "No rationale provided."
         )
-        response.raise_for_status()
-        data = response.json()
-        content = data["message"]["content"]
-        parsed = json.loads(content)
-        return parsed.get("label", "Partially Aligned"), parsed.get("rationale", "No rationale provided.")
 
     def analyze(self, action_df: pd.DataFrame, top_k: int = 1) -> pd.DataFrame:
         action_ids = action_df["action_id"].astype(str).tolist()
